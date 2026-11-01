@@ -1,0 +1,168 @@
+version: 2
+
+models:
+  - name: dim_product
+    description: "Dimensão de produtos, com subcategoria e categoria."
+    columns:
+      - name: sk_product
+        description: "Chave substituta do produto."
+        data_tests: [unique, not_null]
+      - name: productid
+        description: "ID do produto no sistema de origem."
+      - name: product_name
+        description: "Nome do produto."
+      - name: product_subcategory
+        description: "Subcategoria do produto. Nula quando o produto não tem subcategoria."
+      - name: product_category
+        description: "Categoria do produto."
+
+  - name: dim_customer
+    description: "Dimensão de clientes. Clientes pessoa física usam o nome da pessoa e clientes de loja usam o nome da loja."
+    columns:
+      - name: sk_customer
+        description: "Chave substituta do cliente."
+        data_tests: [unique, not_null]
+      - name: customerid
+        description: "ID do cliente no sistema de origem."
+      - name: customer_name
+        description: "Nome completo da pessoa ou nome da loja."
+      - name: storeid
+        description: "ID da loja, quando o cliente é uma loja."
+
+  - name: dim_location
+    description: "Dimensão de localização: cidade, estado e país de cada endereço."
+    columns:
+      - name: sk_location
+        description: "Chave substituta do endereço."
+        data_tests: [unique, not_null]
+      - name: addressid
+        description: "ID do endereço no sistema de origem."
+      - name: city
+        description: "Cidade."
+      - name: state_name
+        description: "Estado ou província."
+      - name: country_name
+        description: "País."
+
+  - name: dim_creditcard
+    description: "Dimensão de cartões de crédito. Inclui a linha 'Sem cartão' para pedidos pagos sem cartão."
+    columns:
+      - name: sk_creditcard
+        description: "Chave substituta do cartão."
+        data_tests: [unique, not_null]
+      - name: creditcardid
+        description: "ID do cartão no sistema de origem. Nulo na linha 'Sem cartão'."
+      - name: cardtype
+        description: "Tipo do cartão."
+
+  - name: dim_date
+    description: "Dimensão de datas, com as datas em que houve pedido."
+    columns:
+      - name: sk_date
+        description: "Chave da data, igual à própria data."
+        data_tests: [unique, not_null]
+      - name: date_day
+        description: "Data."
+      - name: year
+        description: "Ano."
+      - name: quarter
+        description: "Trimestre."
+      - name: month
+        description: "Mês, de 1 a 12."
+      - name: month_name
+        description: "Nome do mês."
+
+  - name: dim_sales_reason
+    description: "Dimensão de motivos de venda."
+    columns:
+      - name: sk_sales_reason
+        description: "Chave substituta do motivo de venda."
+        data_tests: [unique, not_null]
+      - name: salesreasonid
+        description: "ID do motivo no sistema de origem."
+      - name: reason_name
+        description: "Nome do motivo de venda."
+      - name: reason_type
+        description: "Tipo do motivo de venda."
+
+  - name: bridge_order_reason
+    description: "Tabela ponte entre pedidos e motivos de venda. Um pedido pode ter vários motivos."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [salesorderid, fk_sales_reason]
+    columns:
+      - name: salesorderid
+        description: "ID do pedido."
+        data_tests: [not_null]
+      - name: fk_sales_reason
+        description: "Chave estrangeira para dim_sales_reason."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_sales_reason')
+                field: sk_sales_reason
+
+  - name: fct_sales
+    description: "Tabela fato de vendas. Cada linha é um item de pedido (grão: salesorderid + salesorderdetailid)."
+    columns:
+      - name: sk_sales
+        description: "Chave substituta do item de pedido."
+        data_tests: [unique, not_null]
+      - name: fk_product
+        description: "Chave estrangeira para dim_product."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: sk_product
+      - name: fk_customer
+        description: "Chave estrangeira para dim_customer."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: sk_customer
+      - name: fk_location
+        description: "Chave estrangeira para dim_location (endereço de entrega)."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_location')
+                field: sk_location
+      - name: fk_creditcard
+        description: "Chave estrangeira para dim_creditcard."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_creditcard')
+                field: sk_creditcard
+      - name: fk_date
+        description: "Chave estrangeira para dim_date (data do pedido)."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: sk_date
+      - name: salesorderid
+        description: "ID do pedido. Um pedido ocupa uma linha por produto."
+      - name: salesorderdetailid
+        description: "ID do item dentro do pedido."
+      - name: order_status
+        description: "Status do pedido: In process, Approved, Backordered, Rejected, Shipped ou Cancelled."
+      - name: orderqty
+        description: "Quantidade comprada do produto."
+      - name: unitprice
+        description: "Preço unitário do produto."
+      - name: unitpricediscount
+        description: "Desconto aplicado ao item, de 0 a 1."
+      - name: gross_value
+        description: "Valor total negociado: preço unitário x quantidade."
+      - name: net_value
+        description: "Valor total negociado líquido: preço unitário x quantidade x (1 - desconto)."
