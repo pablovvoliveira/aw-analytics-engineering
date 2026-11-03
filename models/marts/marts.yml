@@ -26,6 +26,13 @@ models:
         description: "ID do cliente no sistema de origem."
       - name: customer_name
         description: "Nome completo da pessoa ou nome da loja."
+      - name: customer_type
+        description: "Tipo do cliente: Loja quando há loja associada (storeid preenchido) e Pessoa nos demais casos."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Pessoa', 'Loja']
       - name: storeid
         description: "ID da loja, quando o cliente é uma loja."
 

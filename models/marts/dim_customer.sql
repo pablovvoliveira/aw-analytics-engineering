@@ -19,6 +19,7 @@ select
         nullif(trim(concat_ws(' ', person.firstname, person.middlename, person.lastname)), ''),
         store.name
     ) as customer_name,
+    case when customer.storeid is null then 'Pessoa' else 'Loja' end as customer_type,
     customer.storeid
 from customer
 left join person
